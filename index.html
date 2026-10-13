@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Control de Asistencia</title>
 
-  <!-- Enlaces PWA -->
   <link rel="manifest" href="./manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,12 +12,7 @@
   <meta name="theme-color" content="#0f172a">
 
   <style>
-    * {
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
     body {
       background: #0f172a;
       color: #f8fafc;
@@ -27,97 +21,49 @@
       display: flex;
       flex-direction: column;
     }
-    
     .view { display: none; padding: 10px; flex: 1; flex-direction: column; }
     .view.active { display: flex; }
 
-    /* Pantalla 1: Grupos */
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 14px;
-    }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .title-h1 { font-size: 1.3rem; font-weight: 700; color: #60a5fa; }
+    .sync-indicator { font-size: 0.75rem; color: #94a3b8; display: flex; align-items: center; gap: 4px; }
+    
     .btn-main {
-      background: #2563eb;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 0.8rem;
-      cursor: pointer;
+      background: #2563eb; color: white; border: none; padding: 8px 12px;
+      border-radius: 8px; font-weight: 600; font-size: 0.8rem; cursor: pointer;
     }
     .btn-main:active { transform: scale(0.97); }
 
     .group-list { display: flex; flex-direction: column; gap: 10px; }
     .group-card {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 12px;
-      padding: 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+      padding: 14px; display: flex; justify-content: space-between; align-items: center;
     }
     .group-card h3 { font-size: 1rem; margin-bottom: 3px; color: #f1f5f9; }
     .group-card p { font-size: 0.75rem; color: #94a3b8; }
     .card-actions { display: flex; gap: 6px; }
     .btn-icon {
-      background: #334155;
-      color: #cbd5e1;
-      border: none;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      cursor: pointer;
+      background: #334155; color: #cbd5e1; border: none; padding: 6px 10px;
+      border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer;
     }
     .btn-open { background: #059669; color: white; }
     .btn-del { background: #7f1d1d; color: #fca5a5; }
 
-    /* Pantalla 2: Cuadrícula y Asistencia */
     header.classroom-header {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 12px;
-      padding: 10px;
-      margin-bottom: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+      background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+      padding: 10px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 8px;
     }
-    .header-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+    .header-top { display: flex; justify-content: space-between; align-items: center; }
     .nav-back {
-      background: transparent;
-      border: 1px solid #475569;
-      color: #94a3b8;
-      border-radius: 6px;
-      padding: 5px 8px;
-      font-size: 0.75rem;
-      cursor: pointer;
+      background: transparent; border: 1px solid #475569; color: #94a3b8;
+      border-radius: 6px; padding: 5px 8px; font-size: 0.75rem; cursor: pointer;
     }
     .date-input {
-      background: #0f172a;
-      border: 1px solid #475569;
-      color: #f8fafc;
-      padding: 5px 8px;
-      border-radius: 6px;
-      font-size: 0.8rem;
-      font-weight: 600;
+      background: #0f172a; border: 1px solid #475569; color: #f8fafc;
+      padding: 5px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;
     }
 
-    .stats-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
+    .stats-row { display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; }
     .stat-pill { padding: 3px 6px; border-radius: 6px; }
     .p-green { background: #064e3b; color: #6ee7b7; }
     .p-red { background: #7f1d1d; color: #fca5a5; }
@@ -125,31 +71,19 @@
 
     .actions-bar {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-columns: repeat(4, 1fr);
       gap: 5px;
     }
     .btn-action {
-      background: #334155;
-      color: #e2e8f0;
-      border: none;
-      padding: 7px 4px;
-      border-radius: 6px;
-      font-size: 0.7rem;
-      font-weight: 600;
-      text-align: center;
-      cursor: pointer;
+      background: #334155; color: #e2e8f0; border: none; padding: 7px 3px;
+      border-radius: 6px; font-size: 0.68rem; font-weight: 600; text-align: center; cursor: pointer;
     }
+    .btn-action.sync-btn { background: #16a34a; color: white; }
     .btn-action.download { background: #2563eb; color: white; }
 
-    /* Cuadrícula fija: 7 columnas x 10 filas */
     .grid-wrapper {
-      flex: 1;
-      overflow-y: auto;
-      background: #111827;
-      border: 1px solid #1f2937;
-      border-radius: 10px;
-      padding: 6px;
-      margin-bottom: 8px;
+      flex: 1; overflow-y: auto; background: #111827; border: 1px solid #1f2937;
+      border-radius: 10px; padding: 6px; margin-bottom: 8px;
     }
     .grid {
       display: grid;
@@ -158,98 +92,48 @@
       gap: 4px;
       width: 100%;
     }
-
     .desk {
-      aspect-ratio: 1;
-      border-radius: 6px;
-      padding: 2px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-      cursor: pointer;
-      user-select: none;
-      transition: transform 0.08s ease;
-      min-width: 0;
+      aspect-ratio: 1; border-radius: 6px; padding: 2px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      cursor: pointer; user-select: none; transition: transform 0.08s ease; min-width: 0;
     }
     .desk:active { transform: scale(0.92); }
     .desk svg { width: 16px; height: 16px; margin-bottom: 1px; }
     .desk .s-name {
-      font-size: 0.55rem;
-      font-weight: 600;
-      line-height: 1;
-      max-width: 100%;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      font-size: 0.55rem; font-weight: 600; line-height: 1;
+      max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .desk .s-tag {
-      font-size: 0.45rem;
-      text-transform: uppercase;
-      font-weight: 700;
-      opacity: 0.85;
-      margin-top: 1px;
-    }
+    .desk .s-tag { font-size: 0.45rem; text-transform: uppercase; font-weight: 700; opacity: 0.85; margin-top: 1px; }
 
     .presente { background: #059669; border: 1.5px solid #10b981; color: white; }
     .falta { background: #dc2626; border: 1.5px solid #ef4444; color: white; }
     .retardo { background: #d97706; border: 1.5px solid #f59e0b; color: white; }
 
     .notes-box {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 10px;
-      padding: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+      background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+      padding: 8px; display: flex; flex-direction: column; gap: 4px;
     }
     .notes-box label { font-size: 0.72rem; font-weight: 600; color: #94a3b8; }
     .notes-textarea {
-      background: #0f172a;
-      border: 1px solid #475569;
-      border-radius: 6px;
-      color: #f8fafc;
-      padding: 6px;
-      font-size: 0.75rem;
-      resize: vertical;
-      min-height: 48px;
-      font-family: inherit;
+      background: #0f172a; border: 1px solid #475569; border-radius: 6px;
+      color: #f8fafc; padding: 6px; font-size: 0.75rem; resize: vertical;
+      min-height: 48px; font-family: inherit;
     }
 
     .modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.7);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 14px;
-      z-index: 100;
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none;
+      align-items: center; justify-content: center; padding: 14px; z-index: 100;
     }
     .modal.active { display: flex; }
     .modal-content {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 12px;
-      padding: 14px;
-      width: 100%;
-      max-width: 400px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+      background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+      padding: 14px; width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px;
     }
     .modal-content h3 { font-size: 1rem; color: #60a5fa; }
     .input-text {
-      background: #0f172a;
-      border: 1px solid #475569;
-      color: #f8fafc;
-      border-radius: 6px;
-      padding: 8px;
-      font-size: 0.85rem;
-      width: 100%;
+      background: #0f172a; border: 1px solid #475569; color: #f8fafc;
+      border-radius: 6px; padding: 8px; font-size: 0.85rem; width: 100%;
     }
     .modal-actions { display: flex; justify-content: flex-end; gap: 6px; }
   </style>
@@ -261,9 +145,12 @@
     <div class="top-bar">
       <div>
         <h1 class="title-h1">Mis Grupos</h1>
-        <p style="font-size:0.75rem; color:#94a3b8;">Cuadrícula 7 × 10 (70 pupitres)</p>
+        <div class="sync-indicator" id="sync-status">Sincronizado localmente</div>
       </div>
-      <button class="btn-main" onclick="openCreateGroupModal()">+ Nuevo Grupo</button>
+      <div style="display:flex; gap:6px;">
+        <button class="btn-main" style="background:#16a34a;" onclick="fetchFromCloud()">↻ Traer de Drive</button>
+        <button class="btn-main" onclick="openCreateGroupModal()">+ Grupo</button>
+      </div>
     </div>
     <div class="group-list" id="group-list-container"></div>
   </div>
@@ -275,15 +162,18 @@
         <button class="nav-back" onclick="showGroupsView()">← Grupos</button>
         <input type="date" id="attendance-date" class="date-input" onchange="onDateChanged()">
       </div>
+
       <div class="stats-row">
         <span class="stat-pill p-green" id="stat-pres">Pres: 0</span>
         <span class="stat-pill p-red" id="stat-falta">Faltas: 0</span>
         <span class="stat-pill p-yellow" id="stat-ret">Ret: 0</span>
       </div>
+
       <div class="actions-bar">
         <button class="btn-action" onclick="setAllPresent()">Todos Pres.</button>
         <button class="btn-action" onclick="openEditRosterModal()">Alumnos</button>
-        <button class="btn-action download" onclick="downloadDailyReport()">Descargar .TXT</button>
+        <button class="btn-action sync-btn" onclick="syncWithSheets()">☁ Guardar Drive</button>
+        <button class="btn-action download" onclick="downloadDailyReport()">Descargar</button>
       </div>
     </header>
 
@@ -293,7 +183,7 @@
 
     <div class="notes-box">
       <label for="day-notes">Bloc de Notas del Día:</label>
-      <textarea id="day-notes" class="notes-textarea" placeholder="Observaciones o avisos del día..." oninput="saveCurrentDayNotes()"></textarea>
+      <textarea id="day-notes" class="notes-textarea" placeholder="Observaciones o incidentes de la clase..." oninput="saveCurrentDayNotes()"></textarea>
     </div>
   </div>
 
@@ -309,11 +199,11 @@
     </div>
   </div>
 
-  <!-- MODAL: ASIGNAR ALUMNOS -->
+  <!-- MODAL: EDITAR ALUMNOS -->
   <div id="modal-roster" class="modal">
     <div class="modal-content">
       <h3>Lista de Alumnos (hasta 70)</h3>
-      <p style="font-size:0.7rem; color:#94a3b8;">Pega los nombres (1 por línea) distribuidos en orden en los 70 lugares:</p>
+      <p style="font-size:0.7rem; color:#94a3b8;">1 nombre por línea, ordenados en los 70 lugares (7×10):</p>
       <textarea id="roster-text" class="notes-textarea" style="min-height: 200px;" placeholder="Alumno 1&#10;Alumno 2..."></textarea>
       <div class="modal-actions">
         <button class="btn-icon" onclick="closeModal('modal-roster')">Cancelar</button>
@@ -323,7 +213,11 @@
   </div>
 
   <script>
-    // Registro del Service Worker para cumplir con la instalación PWA
+    // ========================================================
+    // PEGA AQUÍ LA URL DE TU APPS SCRIPT DE GOOGLE SHEETS
+    // ========================================================
+    const SHEETS_WEBAPP_URL = "PEGA_AQUI_TU_URL_DE_APPS_SCRIPT";
+
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js').catch(() => {});
     }
@@ -378,7 +272,7 @@
       container.innerHTML = '';
 
       if (appData.groups.length === 0) {
-        container.innerHTML = '<p style="text-align:center; color:#64748b; padding:20px;">No hay grupos. Toca "+ Nuevo Grupo".</p>';
+        container.innerHTML = '<p style="text-align:center; color:#64748b; padding:20px;">No hay grupos. Toca "+ Grupo".</p>';
         return;
       }
 
@@ -542,6 +436,77 @@
       saveDB();
       closeModal('modal-roster');
       renderClassroom();
+    }
+
+    // ========================================================
+    // SINCRONIZACIÓN CON GOOGLE SHEETS
+    // ========================================================
+    async function syncWithSheets() {
+      if (!SHEETS_WEBAPP_URL || SHEETS_WEBAPP_URL.includes("PEGA_AQUI")) {
+        alert("Primero debes configurar tu URL de Google Apps Script en la variable SHEETS_WEBAPP_URL");
+        return;
+      }
+
+      const group = getCurrentGroup();
+      if (!group) return;
+
+      const att = getAttendanceForDate();
+      const faltas = group.students.filter(s => att[s.id] === 'falta').map(s => s.name);
+      const retardos = group.students.filter(s => att[s.id] === 'retardo').map(s => s.name);
+      const presentes = group.students.filter(s => (att[s.id] || 'presente') === 'presente').map(s => s.name);
+      const notas = (appData.notes[currentGroupId] && appData.notes[currentGroupId][selectedDate]) || '';
+
+      const payload = {
+        appData: appData,
+        reporte: {
+          grupo: group.name,
+          fecha: selectedDate,
+          presentes: presentes.length,
+          faltas: faltas.length,
+          retardos: retardos.length,
+          listaFaltas: faltas.join(', '),
+          listaRetardos: retardos.join(', '),
+          notas: notas
+        }
+      };
+
+      const syncStatus = document.getElementById('sync-status');
+      if (syncStatus) syncStatus.innerText = "Sincronizando con Drive...";
+
+      try {
+        await fetch(SHEETS_WEBAPP_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        alert("¡Asistencia y datos guardados exitosamente en tu Google Sheets!");
+        if (syncStatus) syncStatus.innerText = "Sincronizado con Google Drive";
+      } catch (err) {
+        alert("Error al conectar con Google Sheets. Revisa tu conexión a internet.");
+      }
+    }
+
+    async function fetchFromCloud() {
+      if (!SHEETS_WEBAPP_URL || SHEETS_WEBAPP_URL.includes("PEGA_AQUI")) {
+        alert("Primero debes configurar tu URL de Google Apps Script.");
+        return;
+      }
+
+      try {
+        const res = await fetch(`${SHEETS_WEBAPP_URL}?action=getData`);
+        const data = await res.json();
+        if (data && data.appData && data.appData.groups) {
+          appData = data.appData;
+          saveDB();
+          renderGroupList();
+          alert("¡Datos actualizados desde Google Drive!");
+        } else {
+          alert("Aún no hay datos guardados en la hoja de cálculo.");
+        }
+      } catch (err) {
+        alert("No se pudieron descargar los datos de Google Sheets.");
+      }
     }
 
     function downloadDailyReport() {
