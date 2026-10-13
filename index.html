@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Control de Asistencia</title>
 
+  <!-- Enlaces PWA -->
+  <link rel="manifest" href="./manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Asistencia">
   <meta name="theme-color" content="#0f172a">
-  
-  <link rel="manifest" href="data:application/manifest+json;utf-8,%7B%22name%22%3A%22Control%20de%20Asistencia%22%2C%22short_name%22%3A%22Asistencia%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f172a%22%2C%22theme_color%22%3A%22%230f172a%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20512%20512'%253E%253Crect%20width%3D'512'%20height%3D'512'%20rx%3D'120'%20fill%3D'%232563eb'%2F%253E%253Cpath%20d%3D'M140%20260l70%2070%20160-160'%20stroke%3D'white'%20stroke-width%3D'48'%20fill%3D'none'%20stroke-linecap%3D'round'%2F%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
 
   <style>
     * {
@@ -51,11 +51,7 @@
     }
     .btn-main:active { transform: scale(0.97); }
 
-    .group-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
+    .group-list { display: flex; flex-direction: column; gap: 10px; }
     .group-card {
       background: #1e293b;
       border: 1px solid #334155;
@@ -122,10 +118,7 @@
       font-size: 0.75rem;
       font-weight: 600;
     }
-    .stat-pill {
-      padding: 3px 6px;
-      border-radius: 6px;
-    }
+    .stat-pill { padding: 3px 6px; border-radius: 6px; }
     .p-green { background: #064e3b; color: #6ee7b7; }
     .p-red { background: #7f1d1d; color: #fca5a5; }
     .p-yellow { background: #78350f; color: #fde047; }
@@ -148,7 +141,7 @@
     }
     .btn-action.download { background: #2563eb; color: white; }
 
-    /* Cuadrícula EXACTA: 7 columnas x 10 filas */
+    /* Cuadrícula fija: 7 columnas x 10 filas */
     .grid-wrapper {
       flex: 1;
       overflow-y: auto;
@@ -200,14 +193,10 @@
       margin-top: 1px;
     }
 
-    /* Estados */
     .presente { background: #059669; border: 1.5px solid #10b981; color: white; }
     .falta { background: #dc2626; border: 1.5px solid #ef4444; color: white; }
     .retardo { background: #d97706; border: 1.5px solid #f59e0b; color: white; }
-    .vacio { background: #1e293b; border: 1px dashed #475569; color: #64748b; }
-    .vacio svg { opacity: 0.3; }
 
-    /* Bloc de notas */
     .notes-box {
       background: #1e293b;
       border: 1px solid #334155;
@@ -230,7 +219,6 @@
       font-family: inherit;
     }
 
-    /* Modales */
     .modal {
       position: fixed;
       inset: 0;
@@ -268,7 +256,7 @@
 </head>
 <body>
 
-  <!-- ==================== PANTALLA 1: LISTA DE GRUPOS ==================== -->
+  <!-- PANTALLA 1: GRUPOS -->
   <div id="view-groups" class="view active">
     <div class="top-bar">
       <div>
@@ -277,24 +265,21 @@
       </div>
       <button class="btn-main" onclick="openCreateGroupModal()">+ Nuevo Grupo</button>
     </div>
-
     <div class="group-list" id="group-list-container"></div>
   </div>
 
-  <!-- ==================== PANTALLA 2: AULA 7x10 ==================== -->
+  <!-- PANTALLA 2: AULA 7x10 -->
   <div id="view-classroom" class="view">
     <header class="classroom-header">
       <div class="header-top">
         <button class="nav-back" onclick="showGroupsView()">← Grupos</button>
         <input type="date" id="attendance-date" class="date-input" onchange="onDateChanged()">
       </div>
-
       <div class="stats-row">
         <span class="stat-pill p-green" id="stat-pres">Pres: 0</span>
         <span class="stat-pill p-red" id="stat-falta">Faltas: 0</span>
         <span class="stat-pill p-yellow" id="stat-ret">Ret: 0</span>
       </div>
-
       <div class="actions-bar">
         <button class="btn-action" onclick="setAllPresent()">Todos Pres.</button>
         <button class="btn-action" onclick="openEditRosterModal()">Alumnos</button>
@@ -303,9 +288,7 @@
     </header>
 
     <div class="grid-wrapper">
-      <div class="grid" id="classroom-grid">
-        <!-- 70 casillas (7 cols x 10 filas) -->
-      </div>
+      <div class="grid" id="classroom-grid"></div>
     </div>
 
     <div class="notes-box">
@@ -314,11 +297,11 @@
     </div>
   </div>
 
-  <!-- ==================== MODAL: NUEVO GRUPO ==================== -->
+  <!-- MODAL: NUEVO GRUPO -->
   <div id="modal-group" class="modal">
     <div class="modal-content">
       <h3>Crear Nuevo Grupo</h3>
-      <input type="text" id="new-group-name" class="input-text" placeholder="Ej. Matemáticas 101, Grupo B...">
+      <input type="text" id="new-group-name" class="input-text" placeholder="Ej. 1° A, Matemáticas...">
       <div class="modal-actions">
         <button class="btn-icon" onclick="closeModal('modal-group')">Cancelar</button>
         <button class="btn-main" onclick="saveNewGroup()">Crear</button>
@@ -326,12 +309,12 @@
     </div>
   </div>
 
-  <!-- ==================== MODAL: ASIGNAR ALUMNOS ==================== -->
+  <!-- MODAL: ASIGNAR ALUMNOS -->
   <div id="modal-roster" class="modal">
     <div class="modal-content">
       <h3>Lista de Alumnos (hasta 70)</h3>
-      <p style="font-size:0.7rem; color:#94a3b8;">Pega los nombres (1 por línea). Se colocarán de izquierda a derecha en las 7 columnas y 10 filas:</p>
-      <textarea id="roster-text" class="notes-textarea" style="min-height: 200px;" placeholder="Alumno 1&#10;Alumno 2&#10;Alumno 3..."></textarea>
+      <p style="font-size:0.7rem; color:#94a3b8;">Pega los nombres (1 por línea) distribuidos en orden en los 70 lugares:</p>
+      <textarea id="roster-text" class="notes-textarea" style="min-height: 200px;" placeholder="Alumno 1&#10;Alumno 2..."></textarea>
       <div class="modal-actions">
         <button class="btn-icon" onclick="closeModal('modal-roster')">Cancelar</button>
         <button class="btn-main" onclick="saveRoster()">Guardar</button>
@@ -340,10 +323,14 @@
   </div>
 
   <script>
-    const TOTAL_CELLS = 70; // 7 columnas x 10 filas
+    // Registro del Service Worker para cumplir con la instalación PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+
+    const TOTAL_CELLS = 70;
     const DB_KEY = 'app_asistencia_data_7x10';
 
-    // Generador de plantilla vacía/inicial de 70 lugares
     function createDefaultDesks(count = TOTAL_CELLS) {
       return Array.from({ length: count }, (_, i) => ({
         id: `desk_${i + 1}`,
@@ -475,7 +462,6 @@
 
       let pres = 0, faltas = 0, rets = 0;
 
-      // Asegurar siempre 70 celdas
       for (let i = 0; i < TOTAL_CELLS; i++) {
         const st = group.students[i] || { id: `desk_${i+1}`, name: `Lugar ${i+1}` };
         const status = att[st.id] || 'presente';
@@ -544,7 +530,6 @@
         .map(l => l.trim())
         .filter(l => l.length > 0);
 
-      // Reconstruir lista hasta 70 lugares
       const updated = [];
       for (let i = 0; i < TOTAL_CELLS; i++) {
         updated.push({
@@ -567,7 +552,7 @@
       const faltas = group.students.filter(s => att[s.id] === 'falta').map(s => s.name);
       const retardos = group.students.filter(s => att[s.id] === 'retardo').map(s => s.name);
       const presentes = group.students.filter(s => (att[s.id] || 'presente') === 'presente').map(s => s.name);
-      const notas = (appData.notes[currentGroupId] && appData.notes[currentGroupId][selectedDate]) || 'Sin notas';
+      const notes = (appData.notes[currentGroupId] && appData.notes[currentGroupId][selectedDate]) || 'Sin notas';
 
       let txt = `=========================================\n`;
       txt += `REPORTE DE ASISTENCIA (7x10)\n`;
@@ -588,7 +573,7 @@
       txt += retardos.length > 0 ? retardos.map((n, i) => `  ${i + 1}. ${n}`).join('\n') + '\n' : '  (Ningún retardo)\n';
       txt += '\n';
 
-      txt += `NOTAS DEL DÍA:\n${notas}\n`;
+      txt += `NOTAS DEL DÍA:\n${notes}\n`;
       txt += `=========================================\n`;
 
       const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
