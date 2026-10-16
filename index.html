@@ -1,11 +1,12 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Control de Asistencia</title>
 
-  <link rel="manifest" href="./manifest.json">
+  <!-- PWA Embebida en un solo archivo -->
+  <link rel="manifest" href="data:application/manifest+json;utf-8,%7B%22name%22%3A%22Control%20de%20Asistencia%22%2C%22short_name%22%3A%22Asistencia%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f172a%22%2C%22theme_color%22%3A%22%230f172a%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fcdn-icons-png.flaticon.com%2F512%2F3589%2F3589030.png%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%7D">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Asistencia">
@@ -69,7 +70,6 @@
     .p-red { background: #7f1d1d; color: #fca5a5; }
     .p-yellow { background: #78350f; color: #fde047; }
 
-    /* Barra principal de acciones */
     .actions-bar {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -83,7 +83,6 @@
     .btn-action.download { background: #2563eb; color: white; }
     .btn-action.manage { background: #4f46e5; color: white; }
 
-    /* Barra de herramientas de estructura (Columnas / Filas) */
     .structure-bar {
       display: none;
       background: #0f172a;
@@ -97,7 +96,7 @@
     }
     .structure-bar.active { display: flex; }
     .struct-btn-group { display: flex; gap: 4px; align-items: center; }
-    .struct-label { font-size: 0.72rem; color: #94a3b8; font-weight: 600; margin-right: 2px; }
+    .struct-label { font-size: 0.72rem; color: #94a3b8; font-weight: 600; }
     .btn-tool {
       background: #1e293b; color: #e2e8f0; border: 1px solid #475569;
       padding: 4px 8px; border-radius: 5px; font-size: 0.72rem; font-weight: 700; cursor: pointer;
@@ -128,6 +127,18 @@
       max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .desk .s-tag { font-size: 0.45rem; text-transform: uppercase; font-weight: 700; opacity: 0.85; margin-top: 1px; }
+
+    /* Indicador de notas permanentes en el pupitre */
+    .has-note-badge {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      font-size: 0.55rem;
+      line-height: 1;
+      background: rgba(15, 23, 42, 0.7);
+      border-radius: 4px;
+      padding: 1px;
+    }
 
     .presente { background: #059669; border: 1.5px solid #10b981; color: white; }
     .falta { background: #dc2626; border: 1.5px solid #ef4444; color: white; }
@@ -178,7 +189,7 @@
     <div class="group-list" id="group-list-container"></div>
   </div>
 
-  <!-- PANTALLA 2: AULA Y PASE DE LISTA -->
+  <!-- PANTALLA 2: AULA Y ASISTENCIA -->
   <div id="view-classroom" class="view">
     <header class="classroom-header">
       <div class="header-top">
@@ -202,7 +213,6 @@
         <button class="btn-action download" onclick="downloadDailyReport()">Descargar</button>
       </div>
 
-      <!-- Barra desplegable de estructura (Filas / Columnas / Alumno) -->
       <div class="structure-bar" id="structure-bar">
         <div class="struct-btn-group">
           <span class="struct-label">Cols:</span>
@@ -227,7 +237,7 @@
 
     <div class="notes-box">
       <label for="day-notes">Bloc de Notas del Día:</label>
-      <textarea id="day-notes" class="notes-textarea" placeholder="Observaciones o incidentes de la clase..." oninput="saveCurrentDayNotes()"></textarea>
+      <textarea id="day-notes" class="notes-textarea" placeholder="Observaciones o incidentes del día..." oninput="saveCurrentDayNotes()"></textarea>
     </div>
   </div>
 
@@ -235,7 +245,7 @@
   <div id="modal-group" class="modal">
     <div class="modal-content">
       <h3>Crear Nuevo Grupo</h3>
-      <input type="text" id="new-group-name" class="input-text" placeholder="Ej. 1° A, Matemáticas...">
+      <input type="text" id="new-group-name" class="input-text" placeholder="Ej. Matemáticas 101, Grupo B...">
       <div class="modal-actions">
         <button class="btn-icon" onclick="closeModal('modal-group')">Cancelar</button>
         <button class="btn-main" onclick="saveNewGroup()">Crear</button>
@@ -243,13 +253,20 @@
     </div>
   </div>
 
-  <!-- MODAL: GESTIONAR ESTUDIANTE INDIVIDUAL -->
+  <!-- MODAL: EDITAR ALUMNO INDIVIDUAL (CON NOTAS PERMANENTES) -->
   <div id="modal-single-student" class="modal">
     <div class="modal-content">
       <h3 id="modal-student-title">Editar Alumno</h3>
-      <input type="text" id="student-name-input" class="input-text" placeholder="Nombre del estudiante">
+      <div>
+        <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Nombre del alumno:</label>
+        <input type="text" id="student-name-input" class="input-text" placeholder="Nombre completo">
+      </div>
+      <div>
+        <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">Notas personales permanentes (se conservan siempre):</label>
+        <textarea id="student-note-input" class="notes-textarea" style="min-height:75px;" placeholder="Ej. Discapacidad visual, avisar a tutora, acuerdos médicos, etc."></textarea>
+      </div>
       <div class="modal-actions" style="justify-content:space-between;">
-        <button class="btn-icon btn-del" id="btn-delete-single-student" onclick="deleteCurrentStudent()">Eliminar Alumno</button>
+        <button class="btn-icon btn-del" onclick="deleteCurrentStudent()">Vaciar Lugar</button>
         <div style="display:flex; gap:6px;">
           <button class="btn-icon" onclick="closeModal('modal-single-student')">Cancelar</button>
           <button class="btn-main" onclick="saveSingleStudent()">Guardar</button>
@@ -258,11 +275,12 @@
     </div>
   </div>
 
-  <!-- MODAL: AGREGAR ALUMNO NUEVO -->
+  <!-- MODAL: AGREGAR ALUMNO -->
   <div id="modal-add-student" class="modal">
     <div class="modal-content">
       <h3>Agregar Nuevo Alumno</h3>
-      <input type="text" id="new-student-name" class="input-text" placeholder="Nombre completo del alumno">
+      <input type="text" id="new-student-name" class="input-text" placeholder="Nombre completo">
+      <textarea id="new-student-note" class="notes-textarea" placeholder="Notas permanentes iniciales (opcional)..."></textarea>
       <div class="modal-actions">
         <button class="btn-icon" onclick="closeModal('modal-add-student')">Cancelar</button>
         <button class="btn-main" onclick="confirmAddStudent()">Agregar</button>
@@ -285,18 +303,14 @@
 
   <script>
     const SHEETS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbw95oe9WUEcoZpJIOQOT1m6C3srDAcGS4xcBNh2bNtjjEeNv8z_yJlJNSPj6YrwW8to/exec";
-
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
-    }
-
-    const DB_KEY = 'app_asistencia_data_v3';
+    const DB_KEY = 'app_asistencia_data_v5';
 
     function createDefaultDesks(cols = 7, rows = 10) {
       const count = cols * rows;
       return Array.from({ length: count }, (_, i) => ({
         id: `desk_${Date.now()}_${i + 1}`,
-        name: `Lugar ${i + 1}`
+        name: `Lugar ${i + 1}`,
+        note: ''
       }));
     }
 
@@ -439,11 +453,11 @@
       const rows = group.rows || 10;
       const totalCells = cols * rows;
 
-      // Asegurar que la lista de estudiantes tenga exactamente cols * rows celdas
       while (group.students.length < totalCells) {
         group.students.push({
           id: `desk_${Date.now()}_${group.students.length + 1}`,
-          name: `Lugar ${group.students.length + 1}`
+          name: `Lugar ${group.students.length + 1}`,
+          note: ''
         });
       }
 
@@ -465,24 +479,23 @@
         if (status === 'falta') faltas++;
         if (status === 'retardo') rets++;
 
+        const hasNote = st.note && st.note.trim().length > 0;
+
         const desk = document.createElement('div');
         desk.className = `desk ${status}`;
         desk.innerHTML = `
+          ${hasNote ? '<div class="has-note-badge" title="Tiene notas personales">📝</div>' : ''}
           ${userSvg}
-          <div class="s-name" title="${st.name}">${st.name}</div>
+          <div class="s-name" title="${st.name}${hasNote ? ' - ' + st.note : ''}">${st.name}</div>
           <div class="s-tag">${status}</div>
         `;
 
-        // Toque rápido: cambiar estado
-        desk.onclick = (e) => {
-          toggleStatus(st.id);
-        };
+        desk.onclick = () => toggleStatus(st.id);
 
-        // Mantener presionado (0.5s) o doble clic: editar alumno individual
         desk.onpointerdown = () => {
           pressTimer = setTimeout(() => {
             openSingleStudentModal(i);
-          }, 500);
+          }, 450);
         };
         desk.onpointerup = () => clearTimeout(pressTimer);
         desk.onpointerleave = () => clearTimeout(pressTimer);
@@ -507,9 +520,6 @@
       renderClassroom();
     }
 
-    // ========================================================
-    // GESTIÓN DE COLUMNAS Y FILAS
-    // ========================================================
     function addColumn() {
       const group = getCurrentGroup();
       if (!group) return;
@@ -517,16 +527,15 @@
       const rows = group.rows || 10;
       const newCols = oldCols + 1;
 
-      // Reestructurar estudiantes insertando una celda al final de cada fila
       const newStudents = [];
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < oldCols; c++) {
           newStudents.push(group.students[r * oldCols + c]);
         }
-        // Nueva columna al final de esta fila
         newStudents.push({
           id: `desk_${Date.now()}_${newStudents.length + 1}`,
-          name: `Lugar ${newStudents.length + 1}`
+          name: `Lugar ${newStudents.length + 1}`,
+          note: ''
         });
       }
 
@@ -543,7 +552,7 @@
       const rows = group.rows || 10;
       if (oldCols <= 1) return alert("No puedes tener menos de 1 columna.");
 
-      if (!confirm(`¿Eliminar la última columna (Columna ${oldCols}) y los alumnos en esa columna?`)) return;
+      if (!confirm(`¿Eliminar la última columna (Columna ${oldCols})?`)) return;
 
       const newCols = oldCols - 1;
       const newStudents = [];
@@ -568,7 +577,8 @@
       for (let c = 0; c < cols; c++) {
         group.students.push({
           id: `desk_${Date.now()}_${group.students.length + 1}`,
-          name: `Lugar ${group.students.length + 1}`
+          name: `Lugar ${group.students.length + 1}`,
+          note: ''
         });
       }
 
@@ -583,7 +593,7 @@
       const rows = group.rows || 10;
       if (rows <= 1) return alert("No puedes tener menos de 1 fila.");
 
-      if (!confirm(`¿Eliminar la última fila (Fila ${rows}) y los alumnos en ella?`)) return;
+      if (!confirm(`¿Eliminar la última fila (Fila ${rows})?`)) return;
 
       group.rows = rows - 1;
       group.students.splice(group.rows * cols, cols);
@@ -591,9 +601,7 @@
       renderClassroom();
     }
 
-    // ========================================================
-    // ALUMNO INDIVIDUAL (AGREGAR / EDITAR / ELIMINAR)
-    // ========================================================
+    // Modal individual con notas permanentes
     function openSingleStudentModal(index) {
       const group = getCurrentGroup();
       selectedStudentIndex = index;
@@ -601,6 +609,7 @@
 
       document.getElementById('modal-student-title').innerText = `Lugar ${index + 1}`;
       document.getElementById('student-name-input').value = st.name;
+      document.getElementById('student-note-input').value = st.note || '';
       document.getElementById('modal-single-student').classList.add('active');
     }
 
@@ -608,24 +617,28 @@
       const group = getCurrentGroup();
       if (selectedStudentIndex === null || !group) return;
       const newName = document.getElementById('student-name-input').value.trim();
+      const newNote = document.getElementById('student-note-input').value.trim();
+
       if (newName) {
         group.students[selectedStudentIndex].name = newName;
-        saveDB();
-        renderClassroom();
       }
+      group.students[selectedStudentIndex].note = newNote;
+
+      saveDB();
       closeModal('modal-single-student');
+      renderClassroom();
     }
 
     function deleteCurrentStudent() {
       const group = getCurrentGroup();
       if (selectedStudentIndex === null || !group) return;
       
-      if (!confirm(`¿Vaciar o eliminar a este alumno?`)) return;
+      if (!confirm(`¿Vaciar o reiniciar este lugar?`)) return;
 
-      // Reemplaza por un lugar vacío numerado
       group.students[selectedStudentIndex] = {
         id: `desk_${Date.now()}_${selectedStudentIndex + 1}`,
-        name: `Lugar ${selectedStudentIndex + 1}`
+        name: `Lugar ${selectedStudentIndex + 1}`,
+        note: ''
       };
 
       saveDB();
@@ -635,6 +648,7 @@
 
     function openAddStudentModal() {
       document.getElementById('new-student-name').value = '';
+      document.getElementById('new-student-note').value = '';
       document.getElementById('modal-add-student').classList.add('active');
     }
 
@@ -642,18 +656,19 @@
       const group = getCurrentGroup();
       if (!group) return;
       const name = document.getElementById('new-student-name').value.trim();
+      const note = document.getElementById('new-student-note').value.trim();
       if (!name) return alert("Escribe el nombre del alumno.");
 
-      // Buscar el primer lugar que diga 'Lugar X' o añadir al final
       const emptyIdx = group.students.findIndex(s => s.name.startsWith('Lugar '));
       if (emptyIdx !== -1) {
         group.students[emptyIdx].name = name;
+        group.students[emptyIdx].note = note;
       } else {
         group.students.push({
           id: `std_${Date.now()}`,
-          name: name
+          name: name,
+          note: note
         });
-        // Si excede la matriz, sumamos una fila
         const cols = group.cols || 7;
         group.rows = Math.ceil(group.students.length / cols);
       }
@@ -701,9 +716,11 @@
 
       const updated = [];
       for (let i = 0; i < totalCells; i++) {
+        const prev = group.students[i];
         updated.push({
-          id: group.students[i] ? group.students[i].id : `desk_${Date.now()}_${i + 1}`,
-          name: lines[i] || `Lugar ${i + 1}`
+          id: prev ? prev.id : `desk_${Date.now()}_${i + 1}`,
+          name: lines[i] || `Lugar ${i + 1}`,
+          note: prev ? (prev.note || '') : ''
         });
       }
 
@@ -713,9 +730,6 @@
       renderClassroom();
     }
 
-    // ========================================================
-    // SINCRONIZACIÓN GOOGLE SHEETS
-    // ========================================================
     async function syncWithSheets() {
       if (!SHEETS_WEBAPP_URL || SHEETS_WEBAPP_URL.includes("PEGA_AQUI")) {
         alert("Primero debes configurar tu URL de Google Apps Script.");
@@ -755,7 +769,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        alert("¡Asistencia guardada en Google Sheets!");
+        alert("¡Asistencia y notas guardadas en Google Sheets!");
         if (syncStatus) syncStatus.innerText = "Sincronizado con Drive";
       } catch (err) {
         alert("Error de conexión. Intenta de nuevo.");
@@ -792,7 +806,10 @@
       const faltas = group.students.filter(s => att[s.id] === 'falta').map(s => s.name);
       const retardos = group.students.filter(s => att[s.id] === 'retardo').map(s => s.name);
       const presentes = group.students.filter(s => (att[s.id] || 'presente') === 'presente').map(s => s.name);
-      const notes = (appData.notes[currentGroupId] && appData.notes[currentGroupId][selectedDate]) || 'Sin notas';
+      const dayNotes = (appData.notes[currentGroupId] && appData.notes[currentGroupId][selectedDate]) || 'Sin notas del día';
+
+      // Alumnos con notas permanentes
+      const studentsWithNotes = group.students.filter(s => s.note && s.note.trim().length > 0 && !s.name.startsWith('Lugar '));
 
       let txt = `=========================================\n`;
       txt += `REPORTE DE ASISTENCIA (${group.cols || 7}x${group.rows || 10})\n`;
@@ -813,7 +830,17 @@
       txt += retardos.length > 0 ? retardos.map((n, i) => `  ${i + 1}. ${n}`).join('\n') + '\n' : '  (Ningún retardo)\n';
       txt += '\n';
 
-      txt += `NOTAS DEL DÍA:\n${notes}\n`;
+      txt += `NOTAS PERMANENTES DE ALUMNOS (${studentsWithNotes.length}):\n`;
+      if (studentsWithNotes.length > 0) {
+        studentsWithNotes.forEach(s => {
+          txt += `  • ${s.name}: ${s.note}\n`;
+        });
+      } else {
+        txt += `  (Sin notas personales registradas)\n`;
+      }
+      txt += '\n';
+
+      txt += `OBSERVACIONES DEL DÍA:\n${dayNotes}\n`;
       txt += `=========================================\n`;
 
       const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
