@@ -1,30 +1,838 @@
-const CACHE_NAME = 'asistencia-v3';
-const ASSETS = [
-  './',
-  './index.html',
-  './manifest.json'
-];
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Control de Asistencia</title>
 
-self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
-  );
-  self.skipWaiting();
-});
+  <link rel="manifest" href="./manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Asistencia">
+  <meta name="theme-color" content="#0f172a">
 
-self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))
-      );
-    })
-  );
-  self.clients.claim();
-});
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+    body {
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .view { display: none; padding: 10px; flex: 1; flex-direction: column; }
+    .view.active { display: flex; }
 
-self.addEventListener('fetch', (e) => {
-  e.respondWith(
-    caches.match(e.request).then((res) => res || fetch(e.request))
-  );
-});
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .title-h1 { font-size: 1.3rem; font-weight: 700; color: #60a5fa; }
+    .sync-indicator { font-size: 0.72rem; color: #94a3b8; }
+    
+    .btn-main {
+      background: #2563eb; color: white; border: none; padding: 8px 12px;
+      border-radius: 8px; font-weight: 600; font-size: 0.8rem; cursor: pointer;
+    }
+    .btn-main:active { transform: scale(0.97); }
+
+    .group-list { display: flex; flex-direction: column; gap: 10px; }
+    .group-card {
+      background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+      padding: 14px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .group-card h3 { font-size: 1rem; margin-bottom: 3px; color: #f1f5f9; }
+    .group-card p { font-size: 0.75rem; color: #94a3b8; }
+    .card-actions { display: flex; gap: 6px; }
+    .btn-icon {
+      background: #334155; color: #cbd5e1; border: none; padding: 6px 10px;
+      border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer;
+    }
+    .btn-open { background: #059669; color: white; }
+    .btn-del { background: #7f1d1d; color: #fca5a5; }
+
+    header.classroom-header {
+      background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+      padding: 10px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .header-top { display: flex; justify-content: space-between; align-items: center; }
+    .nav-back {
+      background: transparent; border: 1px solid #475569; color: #94a3b8;
+      border-radius: 6px; padding: 5px 8px; font-size: 0.75rem; cursor: pointer;
+    }
+    .date-input {
+      background: #0f172a; border: 1px solid #475569; color: #f8fafc;
+      padding: 5px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;
+    }
+
+    .stats-row { display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; }
+    .stat-pill { padding: 3px 6px; border-radius: 6px; }
+    .p-green { background: #064e3b; color: #6ee7b7; }
+    .p-red { background: #7f1d1d; color: #fca5a5; }
+    .p-yellow { background: #78350f; color: #fde047; }
+
+    /* Barra principal de acciones */
+    .actions-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+    }
+    .btn-action {
+      background: #334155; color: #e2e8f0; border: none; padding: 7px 3px;
+      border-radius: 6px; font-size: 0.68rem; font-weight: 600; text-align: center; cursor: pointer;
+    }
+    .btn-action.sync-btn { background: #16a34a; color: white; }
+    .btn-action.download { background: #2563eb; color: white; }
+    .btn-action.manage { background: #4f46e5; color: white; }
+
+    /* Barra de herramientas de estructura (Columnas / Filas) */
+    .structure-bar {
+      display: none;
+      background: #0f172a;
+      border: 1px solid #4f46e5;
+      border-radius: 8px;
+      padding: 8px;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .structure-bar.active { display: flex; }
+    .struct-btn-group { display: flex; gap: 4px; align-items: center; }
+    .struct-label { font-size: 0.72rem; color: #94a3b8; font-weight: 600; margin-right: 2px; }
+    .btn-tool {
+      background: #1e293b; color: #e2e8f0; border: 1px solid #475569;
+      padding: 4px 8px; border-radius: 5px; font-size: 0.72rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-tool.del { background: #581c87; border-color: #7e22ce; color: #f3e8ff; }
+    .btn-tool:active { transform: scale(0.95); }
+
+    .grid-wrapper {
+      flex: 1; overflow-x: auto; overflow-y: auto; background: #111827; border: 1px solid #1f2937;
+      border-radius: 10px; padding: 6px; margin-bottom: 8px;
+    }
+    .grid {
+      display: grid;
+      gap: 4px;
+      width: 100%;
+    }
+    .desk {
+      aspect-ratio: 1; border-radius: 6px; padding: 2px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      cursor: pointer; user-select: none; transition: transform 0.08s ease; min-width: 0;
+      position: relative;
+    }
+    .desk:active { transform: scale(0.92); }
+    .desk svg { width: 16px; height: 16px; margin-bottom: 1px; }
+    .desk .s-name {
+      font-size: 0.55rem; font-weight: 600; line-height: 1;
+      max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .desk .s-tag { font-size: 0.45rem; text-transform: uppercase; font-weight: 700; opacity: 0.85; margin-top: 1px; }
+
+    .presente { background: #059669; border: 1.5px solid #10b981; color: white; }
+    .falta { background: #dc2626; border: 1.5px solid #ef4444; color: white; }
+    .retardo { background: #d97706; border: 1.5px solid #f59e0b; color: white; }
+
+    .notes-box {
+      background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+      padding: 8px; display: flex; flex-direction: column; gap: 4px;
+    }
+    .notes-box label { font-size: 0.72rem; font-weight: 600; color: #94a3b8; }
+    .notes-textarea {
+      background: #0f172a; border: 1px solid #475569; border-radius: 6px;
+      color: #f8fafc; padding: 6px; font-size: 0.75rem; resize: vertical;
+      min-height: 48px; font-family: inherit;
+    }
+
+    .modal {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none;
+      align-items: center; justify-content: center; padding: 14px; z-index: 100;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+      background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+      padding: 14px; width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px;
+    }
+    .modal-content h3 { font-size: 1rem; color: #60a5fa; }
+    .input-text {
+      background: #0f172a; border: 1px solid #475569; color: #f8fafc;
+      border-radius: 6px; padding: 8px; font-size: 0.85rem; width: 100%;
+    }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 6px; }
+  </style>
+</head>
+<body>
+
+  <!-- PANTALLA 1: GRUPOS -->
+  <div id="view-groups" class="view active">
+    <div class="top-bar">
+      <div>
+        <h1 class="title-h1">Mis Grupos</h1>
+        <div class="sync-indicator" id="sync-status">Sincronizado localmente</div>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <button class="btn-main" style="background:#16a34a;" onclick="fetchFromCloud()">↻ Traer de Drive</button>
+        <button class="btn-main" onclick="openCreateGroupModal()">+ Grupo</button>
+      </div>
+    </div>
+    <div class="group-list" id="group-list-container"></div>
+  </div>
+
+  <!-- PANTALLA 2: AULA Y PASE DE LISTA -->
+  <div id="view-classroom" class="view">
+    <header class="classroom-header">
+      <div class="header-top">
+        <button class="nav-back" onclick="showGroupsView()">← Grupos</button>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span id="grid-dimensions-lbl" style="font-size:0.7rem; color:#94a3b8; font-weight:700;">7×10</span>
+          <input type="date" id="attendance-date" class="date-input" onchange="onDateChanged()">
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <span class="stat-pill p-green" id="stat-pres">Pres: 0</span>
+        <span class="stat-pill p-red" id="stat-falta">Faltas: 0</span>
+        <span class="stat-pill p-yellow" id="stat-ret">Ret: 0</span>
+      </div>
+
+      <div class="actions-bar">
+        <button class="btn-action" onclick="setAllPresent()">Todos Pres.</button>
+        <button class="btn-action manage" onclick="toggleStructureBar()">⚙ Organizar</button>
+        <button class="btn-action sync-btn" onclick="syncWithSheets()">☁ Guardar</button>
+        <button class="btn-action download" onclick="downloadDailyReport()">Descargar</button>
+      </div>
+
+      <!-- Barra desplegable de estructura (Filas / Columnas / Alumno) -->
+      <div class="structure-bar" id="structure-bar">
+        <div class="struct-btn-group">
+          <span class="struct-label">Cols:</span>
+          <button class="btn-tool" onclick="addColumn()">+ Col</button>
+          <button class="btn-tool del" onclick="removeColumn()">- Col</button>
+        </div>
+        <div class="struct-btn-group">
+          <span class="struct-label">Filas:</span>
+          <button class="btn-tool" onclick="addRow()">+ Fila</button>
+          <button class="btn-tool del" onclick="removeRow()">- Fila</button>
+        </div>
+        <div class="struct-btn-group">
+          <button class="btn-tool" style="background:#2563eb; color:white;" onclick="openAddStudentModal()">+ Alumno</button>
+          <button class="btn-tool" onclick="openEditRosterModal()">Lista Textual</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="grid-wrapper">
+      <div class="grid" id="classroom-grid"></div>
+    </div>
+
+    <div class="notes-box">
+      <label for="day-notes">Bloc de Notas del Día:</label>
+      <textarea id="day-notes" class="notes-textarea" placeholder="Observaciones o incidentes de la clase..." oninput="saveCurrentDayNotes()"></textarea>
+    </div>
+  </div>
+
+  <!-- MODAL: NUEVO GRUPO -->
+  <div id="modal-group" class="modal">
+    <div class="modal-content">
+      <h3>Crear Nuevo Grupo</h3>
+      <input type="text" id="new-group-name" class="input-text" placeholder="Ej. 1° A, Matemáticas...">
+      <div class="modal-actions">
+        <button class="btn-icon" onclick="closeModal('modal-group')">Cancelar</button>
+        <button class="btn-main" onclick="saveNewGroup()">Crear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: GESTIONAR ESTUDIANTE INDIVIDUAL -->
+  <div id="modal-single-student" class="modal">
+    <div class="modal-content">
+      <h3 id="modal-student-title">Editar Alumno</h3>
+      <input type="text" id="student-name-input" class="input-text" placeholder="Nombre del estudiante">
+      <div class="modal-actions" style="justify-content:space-between;">
+        <button class="btn-icon btn-del" id="btn-delete-single-student" onclick="deleteCurrentStudent()">Eliminar Alumno</button>
+        <div style="display:flex; gap:6px;">
+          <button class="btn-icon" onclick="closeModal('modal-single-student')">Cancelar</button>
+          <button class="btn-main" onclick="saveSingleStudent()">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: AGREGAR ALUMNO NUEVO -->
+  <div id="modal-add-student" class="modal">
+    <div class="modal-content">
+      <h3>Agregar Nuevo Alumno</h3>
+      <input type="text" id="new-student-name" class="input-text" placeholder="Nombre completo del alumno">
+      <div class="modal-actions">
+        <button class="btn-icon" onclick="closeModal('modal-add-student')">Cancelar</button>
+        <button class="btn-main" onclick="confirmAddStudent()">Agregar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: EDITAR LISTA COMPLETA -->
+  <div id="modal-roster" class="modal">
+    <div class="modal-content">
+      <h3>Lista de Alumnos (1 por fila)</h3>
+      <p style="font-size:0.7rem; color:#94a3b8;">Los nombres se acomodarán secuencialmente en la cuadrícula:</p>
+      <textarea id="roster-text" class="notes-textarea" style="min-height: 200px;" placeholder="Alumno 1&#10;Alumno 2..."></textarea>
+      <div class="modal-actions">
+        <button class="btn-icon" onclick="closeModal('modal-roster')">Cancelar</button>
+        <button class="btn-main" onclick="saveRoster()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SHEETS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbw95oe9WUEcoZpJIOQOT1m6C3srDAcGS4xcBNh2bNtjjEeNv8z_yJlJNSPj6YrwW8to/exec";
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+
+    const DB_KEY = 'app_asistencia_data_v3';
+
+    function createDefaultDesks(cols = 7, rows = 10) {
+      const count = cols * rows;
+      return Array.from({ length: count }, (_, i) => ({
+        id: `desk_${Date.now()}_${i + 1}`,
+        name: `Lugar ${i + 1}`
+      }));
+    }
+
+    let appData = JSON.parse(localStorage.getItem(DB_KEY)) || {
+      groups: [
+        {
+          id: 'grp_demo',
+          name: 'Grupo Muestra',
+          cols: 7,
+          rows: 10,
+          students: createDefaultDesks(7, 10)
+        }
+      ],
+      attendance: {},
+      notes: {}
+    };
+
+    let currentGroupId = null;
+    let selectedDate = new Date().toISOString().split('T')[0];
+    let selectedStudentIndex = null;
+    let pressTimer = null;
+
+    const cycle = ['presente', 'falta', 'retardo'];
+    const userSvg = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
+
+    function saveDB() {
+      localStorage.setItem(DB_KEY, JSON.stringify(appData));
+    }
+
+    function showGroupsView() {
+      document.getElementById('view-groups').classList.add('active');
+      document.getElementById('view-classroom').classList.remove('active');
+      renderGroupList();
+    }
+
+    function showClassroomView(groupId) {
+      currentGroupId = groupId;
+      const group = getCurrentGroup();
+      if (!group.cols) group.cols = 7;
+      if (!group.rows) group.rows = Math.ceil((group.students.length || 70) / group.cols) || 10;
+      
+      document.getElementById('view-groups').classList.remove('active');
+      document.getElementById('view-classroom').classList.add('active');
+      document.getElementById('attendance-date').value = selectedDate;
+      renderClassroom();
+    }
+
+    function renderGroupList() {
+      const container = document.getElementById('group-list-container');
+      container.innerHTML = '';
+
+      if (appData.groups.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:#64748b; padding:20px;">No hay grupos. Toca "+ Grupo".</p>';
+        return;
+      }
+
+      appData.groups.forEach(g => {
+        const cols = g.cols || 7;
+        const rows = g.rows || 10;
+        const card = document.createElement('div');
+        card.className = 'group-card';
+        card.innerHTML = `
+          <div>
+            <h3>${g.name}</h3>
+            <p>${g.students.length} alumnos (${cols}×${rows})</p>
+          </div>
+          <div class="card-actions">
+            <button class="btn-icon btn-open" onclick="showClassroomView('${g.id}')">Abrir</button>
+            <button class="btn-icon btn-del" onclick="deleteGroup('${g.id}')">✕</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function openCreateGroupModal() {
+      document.getElementById('new-group-name').value = '';
+      document.getElementById('modal-group').classList.add('active');
+    }
+
+    function saveNewGroup() {
+      const name = document.getElementById('new-group-name').value.trim();
+      if (!name) return alert('Ingresa un nombre para el grupo');
+      
+      const newGroup = {
+        id: 'grp_' + Date.now(),
+        name: name,
+        cols: 7,
+        rows: 10,
+        students: createDefaultDesks(7, 10)
+      };
+
+      appData.groups.push(newGroup);
+      saveDB();
+      closeModal('modal-group');
+      showClassroomView(newGroup.id);
+    }
+
+    function deleteGroup(id) {
+      if (!confirm('¿Eliminar este grupo y su historial?')) return;
+      appData.groups = appData.groups.filter(g => g.id !== id);
+      delete appData.attendance[id];
+      delete appData.notes[id];
+      saveDB();
+      renderGroupList();
+    }
+
+    function getCurrentGroup() {
+      return appData.groups.find(g => g.id === currentGroupId);
+    }
+
+    function getAttendanceForDate() {
+      if (!appData.attendance[currentGroupId]) appData.attendance[currentGroupId] = {};
+      if (!appData.attendance[currentGroupId][selectedDate]) {
+        const group = getCurrentGroup();
+        const initial = {};
+        if (group) {
+          group.students.forEach(st => initial[st.id] = 'presente');
+        }
+        appData.attendance[currentGroupId][selectedDate] = initial;
+      }
+      return appData.attendance[currentGroupId][selectedDate];
+    }
+
+    function onDateChanged() {
+      selectedDate = document.getElementById('attendance-date').value;
+      renderClassroom();
+    }
+
+    function toggleStructureBar() {
+      const bar = document.getElementById('structure-bar');
+      bar.classList.toggle('active');
+    }
+
+    function renderClassroom() {
+      const group = getCurrentGroup();
+      if (!group) return;
+
+      const cols = group.cols || 7;
+      const rows = group.rows || 10;
+      const totalCells = cols * rows;
+
+      // Asegurar que la lista de estudiantes tenga exactamente cols * rows celdas
+      while (group.students.length < totalCells) {
+        group.students.push({
+          id: `desk_${Date.now()}_${group.students.length + 1}`,
+          name: `Lugar ${group.students.length + 1}`
+        });
+      }
+
+      document.getElementById('grid-dimensions-lbl').innerText = `${cols}×${rows}`;
+
+      const att = getAttendanceForDate();
+      const grid = document.getElementById('classroom-grid');
+      grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+      grid.style.gridTemplateRows = `repeat(${rows}, auto)`;
+      grid.innerHTML = '';
+
+      let pres = 0, faltas = 0, rets = 0;
+
+      for (let i = 0; i < totalCells; i++) {
+        const st = group.students[i];
+        const status = att[st.id] || 'presente';
+
+        if (status === 'presente') pres++;
+        if (status === 'falta') faltas++;
+        if (status === 'retardo') rets++;
+
+        const desk = document.createElement('div');
+        desk.className = `desk ${status}`;
+        desk.innerHTML = `
+          ${userSvg}
+          <div class="s-name" title="${st.name}">${st.name}</div>
+          <div class="s-tag">${status}</div>
+        `;
+
+        // Toque rápido: cambiar estado
+        desk.onclick = (e) => {
+          toggleStatus(st.id);
+        };
+
+        // Mantener presionado (0.5s) o doble clic: editar alumno individual
+        desk.onpointerdown = () => {
+          pressTimer = setTimeout(() => {
+            openSingleStudentModal(i);
+          }, 500);
+        };
+        desk.onpointerup = () => clearTimeout(pressTimer);
+        desk.onpointerleave = () => clearTimeout(pressTimer);
+
+        grid.appendChild(desk);
+      }
+
+      document.getElementById('stat-pres').innerText = `Pres: ${pres}`;
+      document.getElementById('stat-falta').innerText = `Faltas: ${faltas}`;
+      document.getElementById('stat-ret').innerText = `Ret: ${rets}`;
+
+      const notes = appData.notes[currentGroupId] || {};
+      document.getElementById('day-notes').value = notes[selectedDate] || '';
+    }
+
+    function toggleStatus(studentId) {
+      const att = getAttendanceForDate();
+      const current = att[studentId] || 'presente';
+      const nextIndex = (cycle.indexOf(current) + 1) % cycle.length;
+      att[studentId] = cycle[nextIndex];
+      saveDB();
+      renderClassroom();
+    }
+
+    // ========================================================
+    // GESTIÓN DE COLUMNAS Y FILAS
+    // ========================================================
+    function addColumn() {
+      const group = getCurrentGroup();
+      if (!group) return;
+      const oldCols = group.cols || 7;
+      const rows = group.rows || 10;
+      const newCols = oldCols + 1;
+
+      // Reestructurar estudiantes insertando una celda al final de cada fila
+      const newStudents = [];
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < oldCols; c++) {
+          newStudents.push(group.students[r * oldCols + c]);
+        }
+        // Nueva columna al final de esta fila
+        newStudents.push({
+          id: `desk_${Date.now()}_${newStudents.length + 1}`,
+          name: `Lugar ${newStudents.length + 1}`
+        });
+      }
+
+      group.cols = newCols;
+      group.students = newStudents;
+      saveDB();
+      renderClassroom();
+    }
+
+    function removeColumn() {
+      const group = getCurrentGroup();
+      if (!group) return;
+      const oldCols = group.cols || 7;
+      const rows = group.rows || 10;
+      if (oldCols <= 1) return alert("No puedes tener menos de 1 columna.");
+
+      if (!confirm(`¿Eliminar la última columna (Columna ${oldCols}) y los alumnos en esa columna?`)) return;
+
+      const newCols = oldCols - 1;
+      const newStudents = [];
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < newCols; c++) {
+          newStudents.push(group.students[r * oldCols + c]);
+        }
+      }
+
+      group.cols = newCols;
+      group.students = newStudents;
+      saveDB();
+      renderClassroom();
+    }
+
+    function addRow() {
+      const group = getCurrentGroup();
+      if (!group) return;
+      const cols = group.cols || 7;
+      group.rows = (group.rows || 10) + 1;
+
+      for (let c = 0; c < cols; c++) {
+        group.students.push({
+          id: `desk_${Date.now()}_${group.students.length + 1}`,
+          name: `Lugar ${group.students.length + 1}`
+        });
+      }
+
+      saveDB();
+      renderClassroom();
+    }
+
+    function removeRow() {
+      const group = getCurrentGroup();
+      if (!group) return;
+      const cols = group.cols || 7;
+      const rows = group.rows || 10;
+      if (rows <= 1) return alert("No puedes tener menos de 1 fila.");
+
+      if (!confirm(`¿Eliminar la última fila (Fila ${rows}) y los alumnos en ella?`)) return;
+
+      group.rows = rows - 1;
+      group.students.splice(group.rows * cols, cols);
+      saveDB();
+      renderClassroom();
+    }
+
+    // ========================================================
+    // ALUMNO INDIVIDUAL (AGREGAR / EDITAR / ELIMINAR)
+    // ========================================================
+    function openSingleStudentModal(index) {
+      const group = getCurrentGroup();
+      selectedStudentIndex = index;
+      const st = group.students[index];
+
+      document.getElementById('modal-student-title').innerText = `Lugar ${index + 1}`;
+      document.getElementById('student-name-input').value = st.name;
+      document.getElementById('modal-single-student').classList.add('active');
+    }
+
+    function saveSingleStudent() {
+      const group = getCurrentGroup();
+      if (selectedStudentIndex === null || !group) return;
+      const newName = document.getElementById('student-name-input').value.trim();
+      if (newName) {
+        group.students[selectedStudentIndex].name = newName;
+        saveDB();
+        renderClassroom();
+      }
+      closeModal('modal-single-student');
+    }
+
+    function deleteCurrentStudent() {
+      const group = getCurrentGroup();
+      if (selectedStudentIndex === null || !group) return;
+      
+      if (!confirm(`¿Vaciar o eliminar a este alumno?`)) return;
+
+      // Reemplaza por un lugar vacío numerado
+      group.students[selectedStudentIndex] = {
+        id: `desk_${Date.now()}_${selectedStudentIndex + 1}`,
+        name: `Lugar ${selectedStudentIndex + 1}`
+      };
+
+      saveDB();
+      closeModal('modal-single-student');
+      renderClassroom();
+    }
+
+    function openAddStudentModal() {
+      document.getElementById('new-student-name').value = '';
+      document.getElementById('modal-add-student').classList.add('active');
+    }
+
+    function confirmAddStudent() {
+      const group = getCurrentGroup();
+      if (!group) return;
+      const name = document.getElementById('new-student-name').value.trim();
+      if (!name) return alert("Escribe el nombre del alumno.");
+
+      // Buscar el primer lugar que diga 'Lugar X' o añadir al final
+      const emptyIdx = group.students.findIndex(s => s.name.startsWith('Lugar '));
+      if (emptyIdx !== -1) {
+        group.students[emptyIdx].name = name;
+      } else {
+        group.students.push({
+          id: `std_${Date.now()}`,
+          name: name
+        });
+        // Si excede la matriz, sumamos una fila
+        const cols = group.cols || 7;
+        group.rows = Math.ceil(group.students.length / cols);
+      }
+
+      saveDB();
+      closeModal('modal-add-student');
+      renderClassroom();
+    }
+
+    function setAllPresent() {
+      const group = getCurrentGroup();
+      if (!group) return;
+      const att = getAttendanceForDate();
+      group.students.forEach(s => att[s.id] = 'presente');
+      saveDB();
+      renderClassroom();
+    }
+
+    function saveCurrentDayNotes() {
+      if (!appData.notes[currentGroupId]) appData.notes[currentGroupId] = {};
+      appData.notes[currentGroupId][selectedDate] = document.getElementById('day-notes').value;
+      saveDB();
+    }
+
+    function openEditRosterModal() {
+      const group = getCurrentGroup();
+      if (!group) return;
+      const names = group.students.map(s => s.name).join('\n');
+      document.getElementById('roster-text').value = names;
+      document.getElementById('modal-roster').classList.add('active');
+    }
+
+    function saveRoster() {
+      const group = getCurrentGroup();
+      if (!group) return;
+
+      const lines = document.getElementById('roster-text').value
+        .split('\n')
+        .map(l => l.trim())
+        .filter(l => l.length > 0);
+
+      const cols = group.cols || 7;
+      const rows = group.rows || 10;
+      const totalCells = cols * rows;
+
+      const updated = [];
+      for (let i = 0; i < totalCells; i++) {
+        updated.push({
+          id: group.students[i] ? group.students[i].id : `desk_${Date.now()}_${i + 1}`,
+          name: lines[i] || `Lugar ${i + 1}`
+        });
+      }
+
+      group.students = updated;
+      saveDB();
+      closeModal('modal-roster');
+      renderClassroom();
+    }
+
+    // ========================================================
+    // SINCRONIZACIÓN GOOGLE SHEETS
+    // ========================================================
+    async function syncWithSheets() {
+      if (!SHEETS_WEBAPP_URL || SHEETS_WEBAPP_URL.includes("PEGA_AQUI")) {
+        alert("Primero debes configurar tu URL de Google Apps Script.");
+        return;
+      }
+
+      const group = getCurrentGroup();
+      if (!group) return;
+
+      const att = getAttendanceForDate();
+      const faltas = group.students.filter(s => att[s.id] === 'falta').map(s => s.name);
+      const retardos = group.students.filter(s => att[s.id] === 'retardo').map(s => s.name);
+      const presentes = group.students.filter(s => (att[s.id] || 'presente') === 'presente').map(s => s.name);
+      const notas = (appData.notes[currentGroupId] && appData.notes[currentGroupId][selectedDate]) || '';
+
+      const payload = {
+        appData: appData,
+        reporte: {
+          grupo: group.name,
+          fecha: selectedDate,
+          presentes: presentes.length,
+          faltas: faltas.length,
+          retardos: retardos.length,
+          listaFaltas: faltas.join(', '),
+          listaRetardos: retardos.join(', '),
+          notas: notas
+        }
+      };
+
+      const syncStatus = document.getElementById('sync-status');
+      if (syncStatus) syncStatus.innerText = "Sincronizando...";
+
+      try {
+        await fetch(SHEETS_WEBAPP_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        alert("¡Asistencia guardada en Google Sheets!");
+        if (syncStatus) syncStatus.innerText = "Sincronizado con Drive";
+      } catch (err) {
+        alert("Error de conexión. Intenta de nuevo.");
+      }
+    }
+
+    async function fetchFromCloud() {
+      if (!SHEETS_WEBAPP_URL || SHEETS_WEBAPP_URL.includes("PEGA_AQUI")) {
+        alert("Primero debes configurar tu URL de Google Apps Script.");
+        return;
+      }
+
+      try {
+        const res = await fetch(`${SHEETS_WEBAPP_URL}?action=getData`);
+        const data = await res.json();
+        if (data && data.appData && data.appData.groups) {
+          appData = data.appData;
+          saveDB();
+          renderGroupList();
+          alert("¡Datos actualizados desde Google Drive!");
+        } else {
+          alert("Aún no hay datos guardados en la hoja de cálculo.");
+        }
+      } catch (err) {
+        alert("No se pudieron descargar los datos de Google Sheets.");
+      }
+    }
+
+    function downloadDailyReport() {
+      const group = getCurrentGroup();
+      if (!group) return;
+
+      const att = getAttendanceForDate();
+      const faltas = group.students.filter(s => att[s.id] === 'falta').map(s => s.name);
+      const retardos = group.students.filter(s => att[s.id] === 'retardo').map(s => s.name);
+      const presentes = group.students.filter(s => (att[s.id] || 'presente') === 'presente').map(s => s.name);
+      const notes = (appData.notes[currentGroupId] && appData.notes[currentGroupId][selectedDate]) || 'Sin notas';
+
+      let txt = `=========================================\n`;
+      txt += `REPORTE DE ASISTENCIA (${group.cols || 7}x${group.rows || 10})\n`;
+      txt += `Grupo: ${group.name}\n`;
+      txt += `Fecha: ${selectedDate}\n`;
+      txt += `=========================================\n\n`;
+
+      txt += `RESUMEN:\n`;
+      txt += `  - Presentes: ${presentes.length}\n`;
+      txt += `  - Faltas:    ${faltas.length}\n`;
+      txt += `  - Retardos:  ${retardos.length}\n\n`;
+
+      txt += `FALTAS (${faltas.length}):\n`;
+      txt += faltas.length > 0 ? faltas.map((n, i) => `  ${i + 1}. ${n}`).join('\n') + '\n' : '  (Ninguna falta)\n';
+      txt += '\n';
+
+      txt += `RETARDOS (${retardos.length}):\n`;
+      txt += retardos.length > 0 ? retardos.map((n, i) => `  ${i + 1}. ${n}`).join('\n') + '\n' : '  (Ningún retardo)\n';
+      txt += '\n';
+
+      txt += `NOTAS DEL DÍA:\n${notes}\n`;
+      txt += `=========================================\n`;
+
+      const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Asistencia_${group.name.replace(/\s+/g, '_')}_${selectedDate}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    document.getElementById('attendance-date').value = selectedDate;
+    renderGroupList();
+  </script>
+</body>
+</html>
